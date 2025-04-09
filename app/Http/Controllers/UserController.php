@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+
 use App\Models\User;
-use App\Traits\ApiResponser;
-use Illuminate\Http\Request;
+use App\Models\UserJob;
+
 use Illuminate\Http\Response;
+use Illuminate\Http\Request;
+use App\Traits\ApiResponser;
 use DB;
 
 class UserController extends Controller
@@ -44,40 +47,44 @@ class UserController extends Controller
             return $this->successResponse($user);
     }
     
-    public function add(Request $request)
-    {
+    public function add(Request $request) {
         $rules = [
             'username' => 'required|max:20',
             'password' => 'required|max:20',
             'gender' => 'required|in:Male,Female',
+            'jobid' => 'required|numeric|min:1|not_in:0',
         ];
-
         $this->validate($request, $rules);
-
+    
+        // Validate jobid exists
+        UserJob::findOrFail($request->jobid);
+    
         $user = User::create($request->all());
-        return $this->successResponse($user, Response:: HTTP_CREATED);
+        return $this->successResponse($user, Response::HTTP_CREATED);
     }
-    public function update(Request $request, $id)
-    {
-         $rules = [
-        'username' => 'max:20',
-        'password' => 'max:20',
-        'gender' => 'in:Male,Female',
-    ];
-
-         $this->validate($request, $rules);
-         $user = User::findOrFail($id);
-
-         $user->fill($request->all());
-
-    // If no changes happen
-    if ($user->isClean()) {
-        return $this->errorResponse('At least one value must change', Response::HTTP_UNPROCESSABLE_ENTITY);
+    
+    public function update(Request $request, $id) {
+        $rules = [
+            'username' => 'max:20',
+            'password' => 'max:20',
+            'gender' => 'in:Male,Female',
+            'jobid' => 'required|numeric|min:1|not_in:0',
+        ];
+        $this->validate($request, $rules);
+    
+        UserJob::findOrFail($request->jobid); // validate job exists
+    
+        $user = User::findOrFail($id);
+        $user->fill($request->all());
+    
+        if ($user->isClean()) {
+            return $this->errorResponse('At least one value must change', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    
+        $user->save();
+        return $this->successResponse($user);
     }
-
-    $user->save();
-    return $this->successResponse($user);
-    }
+    
 
     public function delete($id)
     {
